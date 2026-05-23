@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SDLC Bootstrap Kit — bash installer
 # Usage (one-liner, run from your project folder):
-#   curl -fsSL https://raw.githubusercontent.com/YOUR-USERNAME/sdlc-bootstrap-kit/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/tigranatoyan/sdlc-bootstrap-kit/main/install.sh | bash
 #
 # What it does:
 # 1. Clones the kit into a temp folder
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 # --- CONFIG (override via env vars) ---
-KIT_REPO="${SDLC_KIT_REPO:-https://github.com/YOUR-USERNAME/sdlc-bootstrap-kit}"
+KIT_REPO="${SDLC_KIT_REPO:-https://github.com/tigranatoyan/sdlc-bootstrap-kit}"
 KIT_BRANCH="${SDLC_KIT_BRANCH:-main}"
 TEMP_DIR="$(mktemp -d -t sdlc-kit-XXXXXX)"
 

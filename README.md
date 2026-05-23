@@ -9,30 +9,33 @@ You run **one prompt** (`Execute BOOTSTRAP.md`) and Copilot handles the rest. Ap
 ## What's in this kit
 
 ```
-sdlc-bootstrap-kit/
-├── README.md                    ← you are here
-├── USE-IT.md                    ← 1-page quickstart
-├── BOOTSTRAP.md                 ← master prompt Copilot Agent Mode executes (URL-fetch + mode-detect)
-├── UPGRADING.md                 ← how to bump pinned BMAD / Spec Kit / understand-anything versions
-├── install.ps1                  ← Windows one-liner: iwr ... | iex
-├── install.sh                   ← Linux/macOS one-liner: curl ... | bash
-└── framework/                   ← drop-in folder; gets copied into your project
-    ├── .specify/memory/constitution.template.md
-    ├── .bmad-additions/
-    │   ├── governance-rules.md  ← your hardening rules merged into BMAD agents
-    │   └── agents/              ← agents missing from BMAD out-of-the-box
-    │       ├── security.md
-    │       ├── devops.md
-    │       ├── instruction-refactor.md
-    │       └── instruction-loop.md
+sdlc-bootstrap-kit/                          ← kit v0.3.0 (BMAD v6.6 layout)
+├── README.md                                ← you are here
+├── USE-IT.md                                ← 1-page quickstart
+├── BOOTSTRAP.md                             ← master prompt Copilot Agent Mode executes
+├── UPGRADING.md                             ← how to bump pinned versions
+├── install.ps1                              ← Windows one-liner: iwr ... | iex
+├── install.sh                               ← Linux/macOS one-liner: curl ... | bash
+└── framework/                               ← drop-in folder; copy into your project
     ├── .github/
-    │   └── copilot-instructions.md  ← repo-level rules every Copilot session reads
+    │   ├── copilot-instructions.md          ← repo-level Copilot rules
+    │   └── agents/                          ← 5 Copilot @-mentionable agents
+    │       ├── sdlc-engine.agent.md         ← THE central orchestrator (use this one)
+    │       ├── security.agent.md
+    │       ├── devops.agent.md
+    │       ├── instruction-refactor.agent.md
+    │       └── instruction-loop.agent.md
+    ├── .bmad-additions/
+    │   └── governance-rules.md              ← merged into BMAD persona skills during bootstrap
+    ├── .specify/memory/constitution.template.md
     └── docs/templates/
         ├── vision.template.md
         ├── functional-requirements.template.md
         ├── non-functional-requirements.template.md
         └── adr.template.md
 ```
+
+**BMAD v6.6 layout note:** BMAD's own files install at `_bmad/`, `skills/`, `.agents/skills/bmad-*/`, `bmm/`, `config.toml` — not `.bmad-core/`. BMAD personas (Mary/Preston/Winston/Sally/Simon/Devon/Quinn) are reached via the skill mechanism, NOT as standalone Copilot agents. The SDLC Engine agent bridges this — you `@sdlc-engine` and it routes to the right BMAD persona under the hood.
 
 ## Three delivery formats — same content, true one-click
 

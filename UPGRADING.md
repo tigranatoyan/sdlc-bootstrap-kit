@@ -34,7 +34,7 @@ Do NOT bump just because a new version exists. Pinned reproducibility is the poi
    ```bash
    mkdir /tmp/sdlc-smoke && cd /tmp/sdlc-smoke
    git init
-   curl -fsSL https://raw.githubusercontent.com/YOUR-USERNAME/sdlc-bootstrap-kit/main/install.sh | bash
+   curl -fsSL https://raw.githubusercontent.com/tigranatoyan/sdlc-bootstrap-kit/main/install.sh | bash
    # open in VS Code, run BOOTSTRAP.md against this empty folder
    ```
    Confirm Phase C completes without errors.
@@ -56,7 +56,7 @@ Do NOT bump just because a new version exists. Pinned reproducibility is the poi
 
 In the project, in Copilot Agent Mode:
 
-> "Execute BOOTSTRAP.md in upgrade mode. Source the latest kit from https://github.com/YOUR-USERNAME/sdlc-bootstrap-kit branch main."
+> "Execute BOOTSTRAP.md in upgrade mode. Source the latest kit from https://github.com/tigranatoyan/sdlc-bootstrap-kit branch main."
 
 Phase E in `BOOTSTRAP.md` handles the diff-and-merge with per-file approval. The kit version stamped in `.specify/memory/constitution.md` tells Copilot the starting point.
 
