@@ -17,7 +17,7 @@ If the framework files are **present locally**, proceed to Phase A.
 
 If the framework files are **absent**, switch to URL-FETCH MODE:
 
-1. Ask the user: "I do not see the framework files locally. Fetch them from the SDLC Bootstrap Kit repository? Default URL: `https://github.com/YOUR-USERNAME/sdlc-bootstrap-kit` (branch: `main`). Confirm URL or override."
+1. Ask the user: "I do not see the framework files locally. Fetch them from the SDLC Bootstrap Kit repository? Default URL: `https://github.com/tigranatoyan/sdlc-bootstrap-kit` (branch: `main`). Confirm URL or override."
 2. With approved URL `<KIT_URL>` and branch `<KIT_BRANCH>`:
    ```bash
    git clone --depth 1 --branch <KIT_BRANCH> <KIT_URL> /tmp/sdlc-kit

@@ -9,7 +9,7 @@ git init
 
 # 2. Drop in the kit (pick one)
 # Option A: clone this kit and copy
-git clone https://github.com/YOUR-USERNAME/sdlc-bootstrap-kit /tmp/sdlc-kit
+git clone https://github.com/tigranatoyan/sdlc-bootstrap-kit /tmp/sdlc-kit
 cp -r /tmp/sdlc-kit/framework/. .
 cp /tmp/sdlc-kit/BOOTSTRAP.md .
 
