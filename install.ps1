@@ -1,6 +1,6 @@
 # SDLC Bootstrap Kit — PowerShell installer
 # Usage (one-liner, run from your project folder):
-#   iwr https://raw.githubusercontent.com/tigranatoyan/sdlc-bootstrap-kit/main/install.ps1 | iex
+#   iwr https://raw.githubusercontent.com/YOUR-USERNAME/sdlc-bootstrap-kit/main/install.ps1 | iex
 #
 # What it does:
 # 1. Clones the kit into a temp folder
@@ -12,7 +12,7 @@
 $ErrorActionPreference = "Stop"
 
 # --- CONFIG (override via env vars) ---
-$KitRepo   = if ($env:SDLC_KIT_REPO)   { $env:SDLC_KIT_REPO }   else { "https://github.com/tigranatoyan/sdlc-bootstrap-kit" }
+$KitRepo   = if ($env:SDLC_KIT_REPO)   { $env:SDLC_KIT_REPO }   else { "https://github.com/YOUR-USERNAME/sdlc-bootstrap-kit" }
 $KitBranch = if ($env:SDLC_KIT_BRANCH) { $env:SDLC_KIT_BRANCH } else { "main" }
 $TempDir   = Join-Path $env:TEMP "sdlc-kit-$(Get-Random)"
 
