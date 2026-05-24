@@ -1,25 +1,38 @@
-# BOOTSTRAP.md — Master Prompt for Copilot Agent Mode
+# BOOTSTRAP.md — Master Prompt for Copilot Agent Mode (v0.4.0)
 
-> **You are GitHub Copilot in VS Code Agent Mode.** This file is your end-to-end instruction set for installing the SDLC framework into this repository. Execute the phases below in order. **Stop and ask the user** at every gate marked `🛑 GATE`. **Approve nothing destructive without explicit user confirmation.**
+> **You are GitHub Copilot in VS Code Agent Mode.** This file is your end-to-end instruction set for installing the SDLC framework. **After every numbered phase below**, you MUST run `pwsh ./scripts/verify-bootstrap.ps1 -Stage <stage>` and PROCEED ONLY ON `VERDICT: READY`. If a stage returns `NOT READY`, STOP, report the failed checks, and ask the user before continuing or attempting a fix. Do not chain phases on broken state.
 
-> **BMAD v6.6 layout note:** BMAD v6.6 installs at `_bmad/` (core) + `skills/` (skill registry) + `.agents/skills/bmad-*/` (per-persona skill packs) + `bmm/` + `config.toml`. Personas (Mary/Preston/Winston/Sally/Simon/Devon/Quinn) are reached via the skill mechanism, NOT as standalone Copilot `@`-mentionable agents. Copilot-invocable agents live in `.github/agents/*.agent.md`. This BOOTSTRAP respects that layout.
+> **BMAD v6.6 layout note:** BMAD installs at `_bmad/` (core) + `.agents/skills/bmad-*/` (persona skill packs) + `bmm/` + `config.toml`. Personas (Mary/Preston/Winston/Sally/Simon/Devon/Quinn) are reached via the BMAD skill mechanism, NOT as standalone Copilot agents. Copilot-invocable agents live in `.github/agents/*.agent.md`. SDLC Engine (`@sdlc-engine`) is the bridge that routes user prompts to the right BMAD persona under the hood.
 
 ---
 
-## Phase 0 — Source-of-Truth Resolution (always first)
+## Self-verification protocol (applies to every phase)
 
-Determine whether kit files are already in this repo or need to be fetched.
+After each phase below finishes, run:
+
+```powershell
+pwsh ./scripts/verify-bootstrap.ps1 -Stage <stage-name>
+```
+
+The script outputs `VERDICT: READY` or `VERDICT: NOT READY`. **Do not advance** until READY. If NOT READY, halt and ask the user. The script exit code is non-zero on failure, so if invoked via shell you should treat that as a hard stop.
+
+Stage names map to phases as listed in each section heading below.
+
+---
+
+## Phase 0 — Source-of-Truth Resolution + verify-script bootstrap
 
 ```
-RUN: check if `framework/.github/agents/sdlc-engine.agent.md` exists in this repo
+RUN: check if `.github/agents/sdlc-engine.agent.md` exists in this repo
 RUN: check if `.bmad-additions/governance-rules.md` exists
+RUN: check if `scripts/verify-bootstrap.ps1` exists
 ```
 
-If kit files are **present locally**, proceed to Phase A.
+If files are **present locally**, proceed to Phase A.
 
-If kit files are **absent**, switch to URL-FETCH MODE:
+If files are **absent**, switch to URL-FETCH MODE:
 
-1. Ask user: "I do not see kit files locally. Fetch from SDLC Bootstrap Kit? Default URL: `https://github.com/tigranatoyan/sdlc-bootstrap-kit` (branch: `main`). Confirm URL or override."
+1. Ask user: "Fetch from SDLC Bootstrap Kit? Default URL: `https://github.com/YOUR-USERNAME/sdlc-bootstrap-kit` (branch: `main`). Confirm URL or override."
 2. With approved URL `<KIT_URL>` and branch `<KIT_BRANCH>`:
    ```bash
    git clone --depth 1 --branch <KIT_BRANCH> <KIT_URL> /tmp/sdlc-kit
@@ -27,15 +40,15 @@ If kit files are **absent**, switch to URL-FETCH MODE:
 3. Copy framework files into current repo:
    - **Greenfield (current dir clean):** `cp -r /tmp/sdlc-kit/framework/. .`
    - **Brownfield (current dir has files):** stop and ask per-conflict approval. Use kit's `framework/` as source; for each file, if target exists show diff and ask; if target missing, copy.
-4. Copy `BOOTSTRAP.md` from `/tmp/sdlc-kit/BOOTSTRAP.md` to current dir, overwrite only with approval if differs.
-5. Record kit version from Phase Z; will stamp into constitution at Phase C.8/D.6.
-6. Proceed to Phase A.
+4. Copy `BOOTSTRAP.md` from `/tmp/sdlc-kit/BOOTSTRAP.md` to current dir if differs (with approval).
+5. **Verify `scripts/verify-bootstrap.ps1` is now present in the repo.** It must exist before Phase B. If not, stop and ask user.
+6. Record kit version from Phase Z.
 
-🛑 **GATE 0:** URL and version confirmed before any file copy.
+🛑 **GATE 0:** URL confirmed and verify-bootstrap.ps1 present.
 
 ---
 
-## Phase A — Mode Detection (always)
+## Phase A — Mode Detection
 
 ```
 RUN: list contents of current directory
@@ -43,18 +56,13 @@ RUN: check git status
 ```
 
 Decision tree:
+- **GREENFIELD MODE** if: no `src/`, `app/`, `apps/`, `services/`, `packages/`, `lib/` content AND no `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `pom.xml`, `Gemfile` AND no `docs/` content beyond `docs/templates/` AND no `.github/workflows/` content.
+- **BROWNFIELD MODE** otherwise.
+- **UPGRADE MODE** if `.specify/memory/constitution.md` exists with `bootstrap_kit_version:` line.
 
-- **GREENFIELD MODE** if all of:
-  - No files under `src/`, `app/`, `apps/`, `services/`, `packages/`, `lib/`
-  - No `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `pom.xml`, `Gemfile`
-  - No `docs/` content beyond `docs/templates/`
-  - No `.github/workflows/` content
-- **BROWNFIELD MODE** otherwise
-- **UPGRADE MODE** if `.specify/memory/constitution.md` exists with `bootstrap_kit_version:` line
+State mode explicitly, ask user to confirm:
 
-State detected mode explicitly:
-
-> "Detected mode: `<MODE>`. I will follow the `<MODE>` path. Confirm to proceed, or override by saying 'use <other> mode'."
+> "Detected mode: `<MODE>`. Confirm to proceed, or override by saying 'use <other> mode'."
 
 🛑 **GATE 1: Mode confirmation.**
 
@@ -64,15 +72,26 @@ State detected mode explicitly:
 
 Check installed, offer to install missing:
 
-- `node` v20+ (`node --version`)
-- `npm` (`npm --version`)
-- `pipx` or `uv` (preferred over raw `pip` on Windows; `pipx --version` or `uv --version`)
-- `gh` (GitHub CLI) (`gh --version`)
-- `claude` (Claude Code CLI) (`claude --version`)
+- `node` v20+
+- `npm`
+- `git`
+- `pipx` OR `uv` (prefer `uv` on Windows — avoids pip WinError 5)
+- `gh` (GitHub CLI)
+- `claude` (Claude Code CLI)
 
 If missing, present install commands and wait for approval.
 
 🛑 **GATE 2: Prerequisites confirmed.**
+
+### ✅ VERIFY — Stage `prereqs`
+
+```powershell
+pwsh ./scripts/verify-bootstrap.ps1 -Stage prereqs
+```
+
+Expected: PASS on all five required CLIs (node, npm, git, gh, claude). uv and pipx are WARN-acceptable individually (at least one of them must be installable).
+
+If FAIL: halt, list missing CLIs, ask user to install before continuing.
 
 ---
 
@@ -86,56 +105,80 @@ Skip if not greenfield.
 npx --yes bmad-method@${BMAD_VERSION} install --preset greenfield-fullstack --ide vscode --non-interactive
 ```
 
-After install, list what was added. Expected v6.6 structure (verify):
-- `_bmad/` — core
-- `skills/` — skill registry
-- `.agents/skills/bmad-*/` — per-persona skill packs
-- `bmm/` — BMAD method manager
-- `config.toml` — BMAD config
+After install, list what was added.
+
+#### ✅ VERIFY — Stage `bmad-install`
+
+```powershell
+pwsh ./scripts/verify-bootstrap.ps1 -Stage bmad-install
+```
+
+Expected: PASS on `_bmad/core`, `_bmad/bmm`, `_bmad/config.toml`, persona skills count ≥ 7. WARN-acceptable on any missing canonical persona (Copilot reports which).
+
+If FAIL: BMAD install was incomplete or wrong version. Halt, capture stdout/stderr from `npx`, ask user.
+
+---
 
 ### C.2 Install GitHub Spec Kit (pinned)
 
 ```bash
-# Use uv on Windows (pip can fail with WinError 5). Use pipx elsewhere.
 uv tool install "specify-cli==${SPECKIT_VERSION}" || pipx install --force "specify-cli==${SPECKIT_VERSION}"
 specify init --here --ai copilot
 ```
 
+#### ✅ VERIFY — Stage `speckit-install`
+
+```powershell
+pwsh ./scripts/verify-bootstrap.ps1 -Stage speckit-install
+```
+
+Expected: PASS on `.specify/`, `.specify/memory/`, constitution template. WARN-acceptable on slash command count.
+
+If FAIL: halt, capture install output, ask user.
+
+---
+
 ### C.3 Verify kit framework files in place
 
-User has already copied `framework/` contents to repo root (via Phase 0 fetch or manual). Verify:
+```powershell
+pwsh ./scripts/verify-bootstrap.ps1 -Stage framework-files
+```
 
-- `.github/agents/sdlc-engine.agent.md` exists
-- `.github/agents/security.agent.md` exists
-- `.github/agents/devops.agent.md` exists
-- `.github/agents/instruction-refactor.agent.md` exists
-- `.github/agents/instruction-loop.agent.md` exists
-- `.specify/memory/constitution.template.md` exists
-- `.bmad-additions/governance-rules.md` exists
-- `.github/copilot-instructions.md` exists
-- `docs/templates/` has four template files
+Expected: PASS on all 5 kit agents, governance-rules.md, copilot-instructions.md, 4 doc templates, frontmatter parses on each agent.
 
-If any missing, stop and tell the user.
+If FAIL: kit files missing or corrupt. Halt — likely Phase 0 didn't fetch/copy completely. Ask user.
+
+---
 
 ### C.4 Merge kit governance rules into BMAD persona skill prompts
 
-Read `.bmad-additions/governance-rules.md`. For each BMAD persona skill pack under `.agents/skills/bmad-*/`, identify the persona's prompt file (typically `prompt.md` or `persona.md` inside the skill directory). Append the relevant governance rules under a `## Governance Rules (from SDLC Bootstrap Kit)` section. Do NOT alter the persona's identity or workflow — only add rules to the `<rules>` block if present, or to a `## Governance` section if not.
+Read `.bmad-additions/governance-rules.md`. For each BMAD persona skill pack under `.agents/skills/bmad-agent-*/`, identify the persona's prompt file (typically `SKILL.md` inside the skill directory). Append the relevant governance rules under a `## Governance Rules (from SDLC Bootstrap Kit)` section heading. Do NOT alter the persona's identity or workflow — only add rules.
 
 Show user the diff per persona before applying. After approval, apply.
 
-### C.5 Confirm Copilot agent registration
-
-The 5 kit agents are already in `.github/agents/*.agent.md` from the framework copy. Copilot picks them up automatically on Chat panel reload. Verify:
+#### ✅ VERIFY — Stage `governance-merge`
 
 ```powershell
-Get-ChildItem .github/agents/ -Name -Filter "*.agent.md"
+pwsh ./scripts/verify-bootstrap.ps1 -Stage governance-merge
 ```
 
-Expected output includes: `sdlc-engine.agent.md`, `security.agent.md`, `devops.agent.md`, `instruction-refactor.agent.md`, `instruction-loop.agent.md`.
+Expected: PASS on `Personas with governance merged >= 5` (checks for the `Governance Rules` heading marker in each persona's prompt files).
 
-Instruct user: "Close and reopen Copilot Chat panel (or Ctrl+Shift+P → 'Developer: Reload Window') to register the new agents. Type `@sdlc` in chat input to confirm `@sdlc-engine` appears."
+If FAIL: the merge step was skipped or didn't write to the right files. Halt, ask user to inspect.
 
-### C.6 (Optional) Install understand-anything plugin via Claude Code
+---
+
+### C.5 Confirm Copilot agent registration (readiness check, no install action)
+
+Tell user: "Close and reopen Copilot Chat panel (or `Ctrl+Shift+P` → 'Developer: Reload Window'). Type `@sdlc` in chat input. Confirm `@sdlc-engine` appears in the dropdown (it may show with the `.agent.md` file path; that's fine — it works via file-attach pattern)."
+
+Wait for user confirmation. If user says no, troubleshoot with frontmatter inspection. Do NOT proceed until user confirms.
+
+---
+
+### C.6 (Optional) Install understand-anything plugin
+
+Skip on Windows (known scanner hang). On Linux/macOS:
 
 ```bash
 claude plugin marketplace add Lum1104/Understand-Anything
@@ -144,37 +187,99 @@ claude plugin install understand-anything
 
 Add `understand-anything-output/`, `.understandignore`, `intermediate/`, `tmp/` to `.gitignore`.
 
-**Windows users:** if the scanner hangs (known issue), skip this step. Add a backlog item to `docs/ops/known-issues/understand-anything-windows.md` and continue.
+---
 
-### C.7 First commit (in atomic chunks)
+### C.7 Import artifacts to docs/ (if user provided pre-authored content)
 
-Stage and commit in this order, one commit per chunk:
+If user indicated they have pre-authored Vision / FRs / NFRs / etc. in `Initial Input/` or elsewhere, copy them to canonical `docs/` locations per the user's import instructions in their initial prompt.
 
-1. `chore: install BMAD-METHOD v${BMAD_VERSION}` — `_bmad/`, `skills/`, `.agents/skills/bmad-*/`, `bmm/`, `config.toml`, related .gitignore additions
-2. `chore: install Spec Kit v${SPECKIT_VERSION}` — `.specify/` scaffolding except constitution.md, slash command files
-3. `feat: install SDLC kit framework files` — `.github/agents/*.agent.md` (5 kit agents), `.github/copilot-instructions.md`, `.bmad-additions/governance-rules.md`, `docs/templates/*`
-4. `feat: merge SDLC governance into BMAD persona skills` — modifications to `.agents/skills/bmad-*/`
-5. (optional) `chore: install understand-anything plugin` — gitignore additions if you ran C.6
+If no pre-authored artifacts: skip this step (and the verify below).
+
+#### ✅ VERIFY — Stage `imports` (skip if user provided no imports)
+
+```powershell
+pwsh ./scripts/verify-bootstrap.ps1 -Stage imports
+```
+
+Expected: PASS on all expected `docs/*.md` files matching the user's import list. WARN-acceptable on line-count drift (refinement allowed).
+
+If FAIL: imports incomplete. Halt, list missing files, ask user.
+
+---
+
+### C.8 Constitution authoring (interview OR derive from imports)
+
+Two modes:
+
+**C.8a — INTERVIEW** (no imports, or constitution doesn't exist):
+Open `.specify/memory/constitution.template.md`. Interview user one section at a time. Do not write any section without their answer. After each section, draft inline and wait for "ok".
+
+**C.8b — DERIVE FROM IMPORTS** (user has imported requirements):
+Read all imported `docs/*.md`. Draft `.specify/memory/constitution.md` filling every section you can from the evidence, citing source files per section. Ask user only for sections that have no source in their artifacts (typically: deployment target, hosting, observability stack, branching policy, cadence).
+
+When complete, write `.specify/memory/constitution.md`, set `bootstrap_kit_version:` to `KIT_VERSION` from Phase Z.
+
+#### ✅ VERIFY — Stage `constitution`
+
+```powershell
+pwsh ./scripts/verify-bootstrap.ps1 -Stage constitution
+```
+
+Expected: PASS on file exists, bootstrap_kit_version stamped, project_name set, section count ≥ 10, length ≥ 100 lines.
+
+If FAIL: constitution incomplete or unstamped. Halt, fix the missing fields, ask user.
+
+---
+
+### C.9 Atomic commits
+
+Stage and commit in this order:
+
+1. `chore: install BMAD-METHOD v${BMAD_VERSION}` — `_bmad/`, `.agents/skills/bmad-*/`, .gitignore additions
+2. `chore: install Spec Kit v${SPECKIT_VERSION}` — `.specify/` scaffolding except constitution.md
+3. `feat: install SDLC kit framework files` — `.github/agents/*.agent.md`, `.github/copilot-instructions.md`, `.bmad-additions/governance-rules.md`, `docs/templates/*`, `scripts/verify-bootstrap.ps1`
+4. `feat: merge SDLC governance into BMAD persona skills` — modifications to `.agents/skills/bmad-agent-*/`
+5. `feat: import pre-authored requirement artifacts to docs/` — `docs/*.md` imports (if applicable)
+6. `docs: project constitution v1.0.0` — `.specify/memory/constitution.md`
 
 Do NOT push without user approval.
 
-🛑 **GATE 3: Framework installed and committed.**
+#### ✅ VERIFY — Stage `atomic-commits`
 
-### C.8 Constitution interview
+```powershell
+pwsh ./scripts/verify-bootstrap.ps1 -Stage atomic-commits
+```
 
-Open `.specify/memory/constitution.template.md`. Interview user one section at a time. Do not write any section without their answer. Cover every template section. After each section, draft inline and wait for "ok".
+Expected: PASS on commit count ≥ 5, working tree clean, all 5 commit pattern matches found.
 
-When complete, write `.specify/memory/constitution.md`, set `bootstrap_kit_version:` to `KIT_VERSION` from Phase Z, commit as `docs: project constitution v1.0.0`.
+If FAIL: commit chain malformed or working tree dirty. Halt, list missing patterns, ask user.
 
-🛑 **GATE 4: Constitution complete.**
+---
 
-### C.9 Hand off to BMAD lifecycle via SDLC Engine
+### C.10 FINAL verification
+
+```powershell
+pwsh ./scripts/verify-bootstrap.ps1 -Stage final
+```
+
+Expected: PASS on the full bootstrap invariant set (all of: bmad-install, speckit-install, framework-files, governance-merge, imports, constitution, initial-input-preserved, atomic-commits).
+
+If FAIL: bootstrap not in a known-good state. Halt, list all FAIL items, ask user.
+
+🛑 **GATE 3: Final bootstrap verification PASSED.**
+
+---
+
+### C.11 Handoff to SDLC Engine
 
 Tell user:
 
-> "Framework installed and constitution set. To generate artifacts from scratch, switch model to **Claude Opus 4.6** and prompt:
-> `@sdlc-engine pipeline mode. initiate from requirements review. stop at ready-for-development gate.`
-> SDLC Engine will route through BMAD personas (Mary → Preston → Winston → Sally → Simon) and stop before any code is written for your approval."
+> "Bootstrap complete and verified. To run the pipeline:
+> 1. Reload Copilot panel (Ctrl+Shift+P → Developer: Reload Window)
+> 2. Switch model to **Claude Opus 4.6** for architecture-grade reasoning
+> 3. Attach `.github/agents/sdlc-engine.agent.md` to your prompt (type `@`, select the file)
+> 4. Prompt: 'Act as the SDLC Engine persona defined in the attached file. Pipeline mode. Validate imported FRs/NFRs (do not re-author), then proceed to Architecture phase. Stop after every phase. Stop at ready-for-development gate.'
+> 5. After pipeline completes, run: `pwsh ./scripts/verify-bootstrap.ps1 -Stage pre-coding` to confirm readiness for sprint 1."
 
 End BOOTSTRAP execution.
 
@@ -182,172 +287,48 @@ End BOOTSTRAP execution.
 
 ## Phase D — BROWNFIELD PATH
 
-Skip if not brownfield.
+Skip if not brownfield. Same per-phase verification pattern as Phase C, with these differences:
 
-### D.1 Reconnaissance (read-only)
+- D.1 Reconnaissance (no install, no verify)
+- D.2 BMAD install with `--preset brownfield` → verify `bmad-install`
+- D.3 Spec Kit install → verify `speckit-install`
+- D.4 Merge kit framework files non-destructively (per-conflict approval) → verify `framework-files`
+- D.5 (Optional) Understand-anything → skip on Windows
+- D.6 Reverse-engineer Vision + Constitution from existing code → verify `constitution`
+- D.7 Reverse-engineer FRs/NFRs/Architecture as as-built → verify `imports` (if applicable)
+- D.8 Add missing CI/CD gates (no verify yet; covered later in `sprint-1`)
+- D.9 Atomic commits → verify `atomic-commits`
+- D.10 FINAL → verify `final`
 
-Produce a short inventory report:
-- Language(s) and frameworks (from package manifests)
-- Existing CI workflows under `.github/workflows/`
-- Existing docs under `docs/` and root `*.md`
-- Test framework(s) detected
-- Lint/formatter configs detected
-- Existing `.github/copilot-instructions.md`, `.cursorrules`, `CLAUDE.md`, or `.github/agents/*.agent.md`
-
-Show report. **No file changes yet.**
-
-🛑 **GATE D1: Reconnaissance reviewed.**
-
-### D.2 Install BMAD-METHOD v6 in brownfield mode (pinned)
-
-```bash
-npx --yes bmad-method@${BMAD_VERSION} install --preset brownfield --ide vscode --non-interactive
-```
-
-Brownfield preset is more conservative — does not assume project structure.
-
-### D.3 Install Spec Kit (pinned, Windows-safe)
-
-```bash
-uv tool install "specify-cli==${SPECKIT_VERSION}" || pipx install --force "specify-cli==${SPECKIT_VERSION}"
-specify init --here --ai copilot
-```
-
-### D.4 Merge kit framework files non-destructively
-
-For each file in `framework/`:
-- If target path does NOT exist → copy
-- If target path EXISTS → produce three-way merge proposal, ask user before writing
-
-Specifically:
-- `.github/agents/*.agent.md` — if any of the 5 kit agents collide with existing agents, ask user whether to overwrite, rename, or skip
-- `.github/copilot-instructions.md` — if exists, append kit content under `## SDLC Framework Rules` section; else create
-- `docs/templates/*` — create only if missing
-
-### D.5 (Optional) Run understand-anything on existing code
-
-```bash
-claude plugin marketplace add Lum1104/Understand-Anything
-claude plugin install understand-anything
-claude /understand
-```
-
-**Windows users:** skip if scanner hangs. Park in `docs/ops/known-issues/`.
-
-### D.6 Reverse-engineer Vision and Constitution
-
-Activate BMAD Analyst persona (Mary) via skill mechanism. Interview user, primed with what was found in reconnaissance:
-
-> "I've read your existing README, docs, and code. Based on that, I drafted candidate Vision and Constitution sections. Walk through each — confirm, correct, or expand."
-
-For each candidate section, present draft and source files/lines you derived it from. Get approval before writing.
-
-Write to:
-- `docs/VISION.md` (if not already present)
-- `.specify/memory/constitution.md` with `bootstrap_kit_version:` set to `KIT_VERSION`
-
-🛑 **GATE D2: Vision and Constitution confirmed.**
-
-### D.7 Reverse-engineer FRs, NFRs, Architecture
-
-Activate BMAD PM (Preston) for FRs, then Architect (Winston) for NFRs + architecture, via skill mechanism. Both should read the existing code (and understand-anything graph if available) and produce *as-built* documents reflecting what the code actually does — flagging gaps or contradictions.
-
-Write to:
-- `docs/FUNCTIONAL_REQUIREMENTS.md`
-- `docs/NON_FUNCTIONAL_REQUIREMENTS.md`
-- `docs/architecture/*.md` (C4 levels, runtime view, deployment view, data model)
-- `docs/architecture/decisions/ADR-XXXX-*.md` (one per non-trivial decision detected)
-
-Each artifact must include an `## As-Built vs Intended` section flagging where code diverges.
-
-🛑 **GATE D3: As-built documents reviewed.**
-
-### D.8 Add missing CI/CD gates non-destructively
-
-Invoke `@devops`. Read existing `.github/workflows/`. Add only what's missing:
-- `architecture-fitness.yml` (if absent)
-- `security.yml` (if no Snyk/CodeQL workflow exists)
-
-Do NOT touch existing `ci.yml`, `release.yml`, etc.
-
-### D.9 Commit in atomic chunks
-
-Same chunked commit pattern as C.7:
-
-1. `chore: install BMAD-METHOD v${BMAD_VERSION}`
-2. `chore: install Spec Kit v${SPECKIT_VERSION}`
-3. `feat: install SDLC kit framework files`
-4. `feat: merge SDLC governance into BMAD persona skills`
-5. `docs: reverse-engineered VISION and constitution v1.0`
-6. `docs: reverse-engineered FRs, NFRs, architecture v1.0`
-7. `ci: SDLC quality gates`
-8. (optional) `chore: install understand-anything plugin`
-
-🛑 **GATE D4: Brownfield bootstrap complete.**
-
-### D.10 Hand off to daily loop
-
-Tell user:
-
-> "Framework layered onto existing code. As-built docs are your starting baseline. Reload Copilot Chat panel to register the kit agents. To improve the as-built docs or ship the next feature:
-> `@sdlc-engine analyze FRs for completeness`
-> or
-> `@sdlc-engine pipeline mode. resume from ready-for-development gate. implement story S-XXX.`"
-
-End BOOTSTRAP execution.
+Same self-verification protocol applies after every phase.
 
 ---
 
 ## Phase E — UPGRADE PATH
 
-Skip if not upgrade.
-
-### E.1 Read current version
-
-Read `.specify/memory/constitution.md` → `bootstrap_kit_version:` value. Call this `OLD_VERSION`. Current kit's version is `KIT_VERSION` in Phase Z.
-
-### E.2 Diff framework folder
-
-For each file in kit's `framework/`, compare with target file in project. Produce diff report grouped by:
-- New files (additive — safe)
-- Changed templates (need merge)
-- Changed governance rules (need merge into already-customized BMAD skill prompts)
-- Changed agents (need merge into existing `.github/agents/*.agent.md`)
-- Deprecations (files removed in new version)
-
-🛑 **GATE E1: Diff report reviewed.**
-
-### E.3 Apply changes file-by-file with approval
-
-For each diff file, show proposed change, wait for approval, write.
-
-### E.4 Update version stamp
-
-Update `bootstrap_kit_version:` in constitution to `KIT_VERSION`. Commit as `chore: upgrade SDLC kit from <OLD_VERSION> to <KIT_VERSION>`.
-
-End BOOTSTRAP execution.
+Skip if not upgrade. Read current `bootstrap_kit_version`, diff against current kit, apply changes with per-file approval, update version stamp, commit, verify `final`.
 
 ---
 
 ## Phase Z — Kit Metadata and Pinned Versions
 
 ```yaml
-KIT_VERSION: 0.3.0
+KIT_VERSION: 0.4.0
 KIT_DATE: 2026-05-23
-BMAD_VERSION: 6.6.0         # https://github.com/bmad-code-org/BMAD-METHOD/releases
-SPECKIT_VERSION: 0.8.7      # https://github.com/github/spec-kit/releases
-UNDERSTAND_ANYTHING_VERSION: 2.5.0  # https://github.com/Lum1104/Understand-Anything/releases
+BMAD_VERSION: 6.6.0
+SPECKIT_VERSION: 0.8.7
+UNDERSTAND_ANYTHING_VERSION: 2.5.0
 ```
 
-### Changes from v0.2.0
+### Changes from v0.3.0
 
-- Corrected BMAD layout to v6.6 actual (`_bmad/` + `skills/` + `.agents/skills/bmad-*/`, NOT `.bmad-core/`)
-- Moved kit agents from `.bmad-additions/agents/*.md` to `.github/agents/*.agent.md` with Copilot frontmatter (this is what makes them `@`-mentionable in Copilot Chat)
-- Added explicit note that BMAD personas are reached via skill mechanism, NOT as standalone Copilot agents — SDLC Engine bridges this
-- Spec Kit install on Windows uses `uv tool install` (avoids `pip` WinError 5)
-- Atomic commit pattern in Phase C.7 / D.9 — one commit per logical chunk so partial failures are recoverable
-- Phase B prereqs add `uv` as preferred Python installer
+- **Self-verification is baked into the flow.** Each phase ends with `pwsh ./scripts/verify-bootstrap.ps1 -Stage <stage>`. Copilot runs it automatically and HALTS on FAIL — you don't alt-tab to a separate script.
+- **Verify script ships in the framework** at `scripts/verify-bootstrap.ps1`, so it's available from the very first phase.
+- **Per-stage check modes**: `prereqs`, `bmad-install`, `speckit-install`, `framework-files`, `governance-merge`, `imports`, `constitution`, `atomic-commits`, `final`, `pre-coding`, `sprint-1`.
+- C.7 split into imports (C.7) + constitution (C.8) + commits (C.9) for finer-grained verification.
+- C.10 explicit `final` verification before handoff.
+- C.11 handoff now reminds user to run `-Stage pre-coding` after SDLC Engine pipeline completes.
 
-To bump versions, see `UPGRADING.md`.
+To bump pinned versions, see `UPGRADING.md`.
 
-If you (Copilot) cannot resolve any step above, **stop and ask the user**. Do not improvise on phase boundaries, do not skip gates, do not overwrite existing files in brownfield mode without explicit per-file approval.
+If you (Copilot) cannot resolve any verification failure, **stop and ask the user**. Do not improvise on phase boundaries, do not skip gates, do not declare success without the script's `VERDICT: READY`.

@@ -9,7 +9,7 @@ You run **one prompt** (`Execute BOOTSTRAP.md`) and Copilot handles the rest. Ap
 ## What's in this kit
 
 ```
-sdlc-bootstrap-kit/                          ← kit v0.3.0 (BMAD v6.6 layout)
+sdlc-bootstrap-kit/                          ← kit v0.4.0 (inline self-verification)
 ├── README.md                                ← you are here
 ├── USE-IT.md                                ← 1-page quickstart
 ├── BOOTSTRAP.md                             ← master prompt Copilot Agent Mode executes
@@ -28,12 +28,20 @@ sdlc-bootstrap-kit/                          ← kit v0.3.0 (BMAD v6.6 layout)
     ├── .bmad-additions/
     │   └── governance-rules.md              ← merged into BMAD persona skills during bootstrap
     ├── .specify/memory/constitution.template.md
+    ├── scripts/
+    │   └── verify-bootstrap.ps1             ← inline self-verification per phase
     └── docs/templates/
         ├── vision.template.md
         ├── functional-requirements.template.md
         ├── non-functional-requirements.template.md
         └── adr.template.md
 ```
+
+## v0.4.0 — Self-verification baked into the bootstrap flow
+
+`BOOTSTRAP.md` now invokes `pwsh ./scripts/verify-bootstrap.ps1 -Stage <stage>` after every phase. Copilot runs the check, sees PASS or FAIL, and HALTS on FAIL — you never proceed on broken state, and you don't alt-tab to a separate script. The script ships in the framework folder so it's available from Phase 0 onward.
+
+Available stages (ordered by phase): `prereqs` → `bmad-install` → `speckit-install` → `framework-files` → `governance-merge` → `imports` → `constitution` → `atomic-commits` → `final` → `pre-coding` → `sprint-1`.
 
 **BMAD v6.6 layout note:** BMAD's own files install at `_bmad/`, `skills/`, `.agents/skills/bmad-*/`, `bmm/`, `config.toml` — not `.bmad-core/`. BMAD personas (Mary/Preston/Winston/Sally/Simon/Devon/Quinn) are reached via the skill mechanism, NOT as standalone Copilot agents. The SDLC Engine agent bridges this — you `@sdlc-engine` and it routes to the right BMAD persona under the hood.
 
